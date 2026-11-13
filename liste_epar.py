@@ -2,6 +2,11 @@ import pandas as pd
 
 tableau = pd.read_excel("data/ema_medicines_2026-11-12.xlsx", skiprows=8)
 
+# Criterion v1.2 (2026-11-13): "Not yet assigned" is a missing ATC code, not a value.
+# Found by the false-negative control (Ordspono). These rows now go through the MeSH safety net.
+print("ATC 'Not yet assigned':", (tableau["ATC code (human)"] == "Not yet assigned").sum())
+tableau.loc[tableau["ATC code (human)"] == "Not yet assigned", "ATC code (human)"] = None
+
 humains = tableau[tableau["Category"] == "Human"]
 print("Human medicines:", len(humains))
 
@@ -26,7 +31,12 @@ masque_mesh = sans_atc["Therapeutic area (MeSH)"].str.contains(termes, case=Fals
 filet_mesh = sans_atc[masque_mesh]
 print("oncology MeSH safety net :", len(filet_mesh))
 
-oncologie = pd.concat([oncologie_atc, filet_mesh])
+# Criterion v1.2 (2026-11-13): dossiers added after the false-negative control (manual review).
+# Anktiva (EMEA/H/C/006622): BCG-unresponsive bladder cancer, ATC L03AC03 (immunostimulant), outside L01/L02/V10X.
+ajouts = none_biosimilaires[none_biosimilaires["EMA product number"].isin(["EMEA/H/C/006622"])]
+print("Added after false-negative control:", len(ajouts))
+oncologie = pd.concat([oncologie_atc, filet_mesh, ajouts])
+
 print("Oncology (ATC + MeSH) :", len(oncologie))
 
 colonnes_dates = ["Marketing authorisation date", "Refusal of marketing authorisation date", "Withdrawal of application date", "Opinion adopted date"]
